@@ -622,7 +622,12 @@ _noapm_uninstall_perf() {
 
 #region RUST
 _noapm_install_rustup() {
-    curl --proto '=https' --tlsv1.3 https://sh.rustup.rs -sSf | sh -s -- -y
+    if [[ -z $_YES ]]; then
+        curl --proto '=https' --tlsv1.3 https://sh.rustup.rs -sSf | sh
+    else
+        curl --proto '=https' --tlsv1.3 https://sh.rustup.rs -sSf | sh -s -- -y
+    fi
+
     # To update: rustup update
     # To uninstall: rustup self uninstall
 }
