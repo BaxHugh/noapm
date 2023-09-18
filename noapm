@@ -1,0 +1,625 @@
+#!/bin/bash
+
+# command to install or uninstall packages
+# call format is
+# noapm install <package> <package>
+# noapm uninstall <package> <package>
+
+# miniconda could be installed in a few places
+if [[ -z $MINICONDA_LOCATION ]]; then
+    if [[ -d $HOME/.miniconda3 ]]; then
+        MINICONDA_LOCATION=$HOME/.miniconda3
+    elif [[ -d $HOME/.local/bin/miniconda3 ]]; then
+        MINICONDA_LOCATION=$HOME/.local/bin/miniconda3
+    else
+        MINICONDA_LOCATION=$HOME/.miniconda3
+    fi
+fi
+NVM_LOCATION=${NVM_LOCATION:=$HOME/.nvm}
+
+_error() {
+    echo -e "\e[31mError: $1\e[0m" >&2
+    return 1
+}
+
+_error_and_exit() {
+    _print_warn_buffer
+    _print_info_buffer
+    _error "$1"
+    exit 1
+}
+
+_warn() {
+    echo -e "\e[33mWarning: $1\e[0m" >&2
+}
+
+_yecho() {
+    echo -e "\e[33m$1\e[0m"
+}
+
+_gecho() {
+    echo -e "\e[32m$1\e[0m"
+}
+
+_becho() {
+    echo -e "\e[34m$1\e[0m"
+}
+
+_omzsh_is_installed() {
+    [[ -d $HOME/.oh-my-zsh ]]
+}
+
+_warn_at_end_of_script() {
+    # Add the message to a line in a buffer which is yechoed at the end of the script
+    # This is useful for warning the user about something which may be important
+    # but not fatal to the script
+    _WARNINGS_BUFFER="${_WARNINGS_BUFFER}$1\n"
+}
+_info_at_end_of_script() {
+    # Similar to warn_at_end_of_script but for info messages
+    _INFO_BUFFER="${_INFO_BUFFER}$1\n"
+}
+
+_print_warn_buffer() {
+    # call _warn for each line of the buffer
+    if [[ -z $_WARNINGS_BUFFER ]]; then
+        return 0
+    fi
+    echo -e $_WARNINGS_BUFFER | while read line; do
+        _warn "$line"
+    done
+}
+
+_print_info_buffer() {
+    # call _yecho for each line of the buffer
+    if [[ -z $_INFO_BUFFER ]]; then
+        return 0
+    fi
+    echo -e $_INFO_BUFFER | while read line; do
+        _yecho "$line"
+    done
+}
+
+_echo_tool_description() {
+    echo "Install or uninstall miscellaneous packages / tools which don't have installation provided simply by a common package manager."
+    echo "Also install oh-my-zsh completions for packages if available."
+}
+
+_install_omzsh_completions_from_file_or_dir() {
+    local PLUGIN_NAME=$1
+    local COMPLETION_FILE_OR_DIR=$2
+    if _omzsh_is_installed; then
+        local target=$(_plugins_directory)/$PLUGIN_NAME
+        rm -rf $target 2> /dev/null
+        if -f $COMPLETION_FILE_OR_DIR; then
+            mkdir $target 2> /dev/null
+            local target=$target/_$PLUGIN_NAME
+        fi
+        mv $COMPLETION_FILE_OR_DIR $target \
+            && _info_at_end_of_script "To enable the $PLUGIN_NAME completions plugin add '$PLUGIN_NAME' to the plugins variable found in ~/.zshrc" \
+            || _warn_at_end_of_script "Failed to install $PLUGIN_NAME completions"
+    fi
+}
+
+_tmp_omzsh_completions_path() {
+    local PACKAGE=$1
+    echo /tmp/_noapm_${PACKAGE}-completions
+}
+
+_install_omzsh_completion_from_tmp() {
+    _install_omzsh_completions_from_file_or_dir $1 $(_tmp_omzsh_completions_path $1)
+}
+
+_already_installed() {
+    local PACKAGE=$1
+    if type "_noapm_${PACKAGE}_is_installed" > /dev/null 2>&1 ; then
+        _noapm_${PACKAGE}_is_installed
+    else
+        which $PACKAGE > /dev/null
+    fi  
+}
+
+
+_help() {
+
+    if [[ -z $_COMMAND ]] || [[ $_COMMAND == "help" ]]; then
+        echo "Usage: noapm <install|uninstall> [options] <package> <package> ..."
+        echo "Usage: noapm self <command> [options]"
+        _echo_tool_description 
+        echo ""
+        echo "See further help for each command with 'noapm <command> --help'"
+        echo "Commands:"
+        echo "  install"
+        echo "  uninstall"
+        echo "  self"
+        echo "  list"
+        echo "  help"
+    fi
+
+    case $_COMMAND in
+        self)
+            echo "Usage: noapm self [options]"
+            _echo_tool_description
+            echo ""
+            echo "Options:"
+            echo "  --update       Update noapm"
+            ;;
+        install)
+            echo "Usage: noapm install [options] <package> <package> ..."
+            _echo_tool_description
+            echo ""
+            echo "By default --completions and --configure are enabled"
+            echo "Options:"
+            echo "  -f, --force      Force install, i.e. don't check if already installed"
+            echo "  --completions    Install oh-my-zsh completions for packages if available and oh-my-zsh is installed. (on by default)"
+            echo "  --no-completions  Don't install oh-my-zsh completions"
+            echo "  --configure      Run any post install configuration defined for a package after installing it (on by default)"
+            echo "  --no-configure   Don't run any post install configuration"
+            echo ""
+            echo "Available packages:"
+            for package in $(_get_available_packages); do
+                echo "  $package"
+            done
+            ;;
+        uninstall)
+            echo "Usage: noapm uninstall [options] <package> <package> ..."
+            _echo_tool_description
+            echo ""
+            echo "By default --configure is enabled"
+            echo "Options:"
+            echo "  -f, --force      Force uninstall, i.e. don't check if already uninstalled"
+            echo "  --configure      Tear down any post install configuration. (on by default)"
+            echo "  --no-configure   Don't tear down any post install configuration."
+            echo ""
+            echo "Available packages:"
+            for package in $(_get_available_packages); do
+                echo "  $package"
+            done
+            ;;
+        list)
+            echo "Usage: noapm list"
+            _echo_tool_description
+            echo ""
+            echo "List available packages"
+            echo ""
+            echo "Available packages:"
+            ;;
+    esac
+}
+
+_get_available_packages() {
+    # echo all packages which have a function defined _$package-install
+    # or _$package-uninstall
+
+    # get all functions
+    declare -F | awk '{print $3}' \
+        | grep -E '_noapm_(install|uninstall)_' \
+        | sed -E 's/_noapm_(install|uninstall)_//g' \
+        | sort | uniq
+}
+
+_process_args() {
+    # args look like <command> [options] <package> <package> ...
+    # This sets the appropriate variables
+    # _COMMAND, _INSTALL, _UNINSTALL, _FORCE, _PACKAGES, _COMPLETIONS, _CONFIGURE
+
+    _process_subcommand() {
+        _COMMAND=$1
+        case $_COMMAND in
+            install)
+                _INSTALL=1
+                shift
+                _process_flags_with_package_args $@
+                ;;
+            uninstall)
+                _UNINSTALL=1
+                shift
+                _process_flags_with_package_args $@
+                ;;
+            self) 
+                _SELF=1
+                shift
+                _process_self_command_flags $@
+                ;;
+            help)
+                _help
+                exit 0
+                ;;
+            list)
+                for package in $(_get_available_packages); do
+                    echo "$package"
+                done
+                return 0
+                ;;
+            *)
+                _error "Unknown command $_COMMAND"
+                unset _COMMAND  # So that help prints
+                _help
+                exit 1
+                ;;
+        esac
+        shift
+    }
+
+    _process_flags_with_package_args() {
+        # args look like [options]<package> <package> ...
+        while [[ $# -gt 0 ]]; do
+            case $1 in
+                -f|--force)
+                    _FORCE=1
+                    shift
+                    ;;
+                ## --completions for installing oh-my-zsh completions
+                --completions)
+                    _COMPLETIONS=1
+                    shift
+                    ;;
+                --no-completions)
+                    unset _COMPLETIONS
+                    shift
+                    ;;
+                --configure)
+                    _CONFIGURE=1
+                    shift
+                    ;;
+                --no-configure)
+                    unset _CONFIGURE
+                    shift
+                    ;;
+                --help)
+                    _help
+                    exit 0
+                    ;;
+                --*)
+                    _error "Unknown option $1"
+                    _help
+                    exit 1
+                    ;;
+                -*)
+                    _error "Unknown option $1"
+                    _help
+                    exit 1
+                    ;;
+                *)
+                    _PACKAGES=$@
+                    return 0
+                    ;;
+            esac
+        done
+    }
+
+    _process_self_command_flags() {
+        while [[ $# -gt 0 ]]; do
+            case $1 in
+                --update)
+                    _UPDATE=1
+                    shift
+                    ;;
+                --help)
+                    _help
+                    exit 0
+                    ;;
+                --*)
+                    _error "Unknown option $1"
+                    _help
+                    exit 1
+                    ;;
+                -*)
+                    _error "Unknown option $1"
+                    _help
+                    exit 1
+                    ;;
+                *)
+                    _error "Unknown argument $1"
+                    _help
+                    exit 1
+                    ;;
+            esac
+        done
+    }
+
+    _process_subcommand $@
+}
+
+
+_main() {
+    _COMPLETIONS=1 # On by default but may be unset by _process_args
+    _CONFIGURE=1 # On by default but may be unset by _process_args
+    _process_args $@ # This sets the appropriate variables:
+    #  _COMMAND, _INSTALL, _UNINSTALL, _SELF, 
+    # _PACKAGES, _FORCE, _COMPLETIONS, _CONFIGURE
+    # _UPDATE
+
+    case $_COMMAND in
+        install)
+            if [[ -z $_PACKAGES ]]; then
+                _error "No packages specified"
+                _help
+                exit 1
+            fi
+            for package in $_PACKAGES; do
+                if type "_noapm_install_${package}" > /dev/null 2>&1 ; then
+                    if _already_installed $package && [[ -z $_FORCE ]]; then
+                        _becho "$package already installed - skipping"
+                    else
+                        _becho "Installing $package..."
+                        _noapm_install_${package} || _error_and_exit "Failed to install $package"
+                        _gecho "Done"
+                    fi
+
+                    if [[ ! -z $_COMPLETIONS ]]; then
+                        # send both sterr and err to /dev/null
+                        if type "_noapm_completions_install_${package}" > /dev/null 2>&1 ; then
+                            _becho "Installing $package completions..."
+                            rm -rf $(_tmp_omzsh_completions_path $package) 2> /dev/null
+                            _noapm_completions_install_${package} || _warn_at_end_of_script "Failed to install $package completions"
+                            _gecho "Done"
+                        fi
+                    fi
+                    
+                    if [[ ! -z $_CONFIGURE ]]; then
+                        if type "_noapm_configure_${package}" > /dev/null 2>&1 ; then
+                            _becho "Configuring $package..."
+                            _noapm_configure_${package} || _warn_at_end_of_script "Failed to configure $package"
+                            _gecho "Done"
+                        fi
+                    fi
+                else
+                    _warn "No install function found for $package"
+                fi
+            done
+            ;;
+
+        uninstall)
+            if [[ -z $_PACKAGES ]]; then
+                _error "No packages specified"
+                _help
+                exit 1
+            fi
+            for package in $_PACKAGES; do
+                if type "_noapm_uninstall_${package}" > /dev/null 2>&1 ; then
+                    if ! _already_installed $package && [[ -z $_FORCE ]]; then
+                        _becho "$package not installed, skipping"
+                    else
+                        _becho "Uninstalling $package..."
+                        _noapm_uninstall_${package} || _error_and_exit "Failed to uninstall $package"
+                        _gecho "Done"
+                    fi
+
+                    if [[ ! -z $_COMPLETIONS ]]; then
+                        if type "_noapm_completions_install_${package}" > /dev/null 2>&1 ; then
+                            _becho "Uninstalling $package completions..."
+                            rm  -rf $(_plugins_directory)/$package > /dev/null
+                            _info_at_end_of_script "You should remove '$PLUGIN_NAME' from the plugins variable found in ~/.zshrc"
+                            _gecho "Done"
+                        fi
+                    fi
+
+                    if [[ ! -z $_CONFIGURE ]]; then
+                        if type "_noapm_unconfigure_${package}" > /dev/null 2>&1 ; then
+                            _becho "Unconfiguring $package..."
+                            _noapm_unconfigure_${package} || _warn_at_end_of_script "Failed to unconfigure $package"
+                            _gecho "Done"
+                        fi
+                    fi
+                else
+                    _warn "No uninstall function found for $package"
+                fi
+            done
+            ;;
+
+        self)
+            if [[ ! -z $_UPDATE ]]; then
+                _becho "Updating noapm..."
+                _error_and_exit "Not implemented"
+                # TODO: implement
+                # _gecho "Done"
+            fi
+            ;;
+    esac
+}
+
+_plugins_directory() {
+    echo ${ZSH_CUSTOM:=$HOME/.oh-my-zsh/custom}/plugins
+}
+
+
+#region POETRY
+_noapm_install_poetry() {
+    # Poetry installer is clever enough to know if it's already installed
+    curl -sSL https://install.python-poetry.org | python3 - || return 1
+}
+
+_noapm_completions_install_poetry() {
+    if which poetry > /dev/null; then
+        poetry completions zsh > $(_tmp_omzsh_completions_path poetry) || return 1
+    else
+        "$HOME/.local/bin/poetry completions zsh" > $(_tmp_omzsh_completions_path poetry) || return 1
+    fi
+}
+
+_noapm_uninstall_poetry() {
+    curl -sSL https://install.python-poetry.org | python3 - --uninstall || return 1
+}
+#endregion POETRY
+
+#region DASEL
+_noapm_install_dasel() {
+    sudo wget https://github.com/TomWright/dasel/releases/latest/download/dasel_linux_amd64 -O /usr/local/bin/dasel \
+    && sudo chmod +x /usr/local/bin/dasel
+}
+
+_noapm_uninstall_dasel() {
+    sudo rm /usr/local/bin/dasel
+}
+#endregion DASEL
+
+#region DOCKER
+_noapm_install_docker() {
+    # these steps are from 'https://www.digitalocean.com/community/tutorials/how-to-install-and-use-docker-on-ubuntu-22-04'
+
+    curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo gpg --dearmor -o /usr/share/keyrings/docker-archive-keyring.gpg \
+        && echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/docker-archive-keyring.gpg] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable" | sudo tee /etc/apt/sources.list.d/docker.list > /dev/null \
+        || _error "Failed to add docker repository" || return 1
+    sudo apt update \
+        && apt-cache policy docker-ce \
+        && sudo apt install -y docker-ce \
+        || _error "Failed to install docker" || return 1
+
+
+}
+
+_noapm_uninstall_docker() {
+    sudo apt remove -y docker-ce || _warn_at_end_of_script "docker: Failed to remove docker-ce"
+}
+
+_noapm_configure_docker() {
+    # Configure docker to run without sudo
+    # Add user to docker group if not in already
+    if ! groups | grep -q docker; then
+        echo "Adding user to docker group..."
+        sudo usermod -aG docker $(whoami) || _warn_at_end_of_script "docker: Failed to add user to docker group"
+    fi
+    _info_at_end_of_script "To enable and start docker run 'sudo systemctl enable docker && sudo systemctl start docker'"
+}
+
+_noapm_unconfigure_docker() {
+    echo "Removing user from docker group..."
+    sudo usermod -G $(groups | sed -E 's/.*sudo.*//g' | sed -E 's/ /,/g') $(whoami) || _warn_at_end_of_script "docker: Failed to remove user from docker group"
+}
+
+#endregion DOCKER
+
+#region MINICONDA
+_noapm_install_conda() {    
+    curl -L "https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh" -o /tmp/install-miniconda.sh
+    bash /tmp/install-miniconda.sh -b -p $MINICONDA_LOCATION
+}
+
+_noapm_conda_is_installed() {
+    if [[ -d $MINICONDA_LOCATION ]]; then
+        return 0
+    else
+        return 1
+    fi
+}
+
+_noapm_configure_conda() {
+    # Configure miniconda to run without activating base
+    $MINICONDA_LOCATION/bin/conda init bash zsh \
+    && echo conda config --set auto_activate_base false \
+    && conda config --set auto_activate_base false \
+    && echo conda config --set changeps1 false \
+    && conda config --set changeps1 false \
+    || _warn_at_end_of_script "miniconda: Failed to configure miniconda"
+}
+
+_noapm_uninstall_conda() {
+    rm -rf $MINICONDA_LOCATION || _warn "Failed to remove miniconda3 directory: $MINICONDA_LOCATION"
+}
+
+_noapm_completions_install_conda() {
+    git clone https://github.com/esc/conda-zsh-completion $(_tmp_omzsh_completions_path conda) || return 1
+}
+#endregion MINICONDA
+
+#region MONGODB
+_noapm_install_mongodb-compass() {
+    wget https://downloads.mongodb.com/compass/mongodb-compass_1.37.0_amd64.deb -O /tmp/mongodb-compass.deb
+    sudo dpkg -i /tmp/mongodb-compass.deb
+}
+_noapm_uninstall_mongodb-compass() {
+    sudo apt remove -y mongodb-compass
+}
+#endregion MONGODB
+
+#region NVM
+_noapm_install_nvm() {
+    # Install node version manager see https://github.com/nvm-sh/nvm
+    curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.3/install.sh | bash
+    # This installs oh-my-zsh completions to ~/.zshrc
+}
+
+_noapm_uninstall_nvm() {
+    rm -rf $NVM_LOCATION
+    # Not sure how to uninstall completions
+}
+
+_noapm_nvm_is_installed() {
+    if [[ -d $NVM_LOCATION ]]; then
+        return 0
+    else
+        return 1
+    fi
+}
+
+#endregion NVM
+
+#region PERF
+_noapm_install_perf() {
+    sudo apt install -y linux-tools-common linux-tools-generic linux-tools-$(uname -r)
+}
+
+_noapm_uninstall_perf() {
+    sudo apt remove -y linux-tools-common linux-tools-generic linux-tools-$(uname -r)
+}
+#endregion PERF
+
+#region RUST
+_noapm_install_rustup() {
+    curl --proto '=https' --tlsv1.3 https://sh.rustup.rs -sSf | sh
+    # To update: rustup update
+    # To uninstall: rustup self uninstall
+}
+
+_noapm_completions_install_rustup() {
+    local target=$(_tmp_omzsh_completions_path rustup)
+    rmdir $target 2> /dev/null
+    mkdir $target 2> /dev/null
+    local rtn=0
+    if which rustup > /dev/null; then
+        rustup completions zsh rustup > $target/_rustup || local rtn=1
+        rustup completions zsh cargo > $target/_cargo || local rtn=1
+    else
+        "$HOME/.cargo/bin/rustup completions zsh rustup" > $target/_rustup || local rtn=1
+        "$HOME/.cargo/bin/rustup completions zsh cargo" > $target/_cargo || local rtn=1
+    fi
+    return $rtn
+}
+
+_noapm_uninstall_rustup() {
+    rustup self uninstall
+}
+#endregion RUST
+
+#region WINE
+_noapm_install_wine() {
+    if cat /etc/os-release | grep -oP "(?<=VERSION=\").*(?=\")" | grep -q 22\.04; then
+        sudo dpkg --add-architecture i386 \
+        && sudo wget -O /etc/apt/keyrings/winehq-archive.key https://dl.winehq.org/wine-builds/winehq.key \
+        && sudo wget -NP /etc/apt/sources.list.d/ https://dl.winehq.org/wine-builds/ubuntu/dists/jammy/winehq-jammy.sources \
+        && sudo apt update \
+        && sudo apt install -y winehq-stable \
+        || _error "Failed to install WineHQ" || return 1
+    else
+        _error "WineHQ is only supported on Ubuntu 22.04"
+        return 1
+    fi
+}
+
+_noapm_uninstall_wine() {
+    sudo apt remove -y winehq-stable
+}
+#endregion WINE
+
+# We want to just source the functions for some tests in a separate script
+if [[ -z $_SOURCING_FILE_FOR_TESTS ]]; then
+    _main $@
+
+    _print_warn_buffer
+    _print_info_buffer
+    if [[ $_COMMAND == "install" ]]; then
+        _yecho "To enable completions for a command add it's name to the plugins variable found in ~/.zshrc"
+        _yecho "You may need to restart your shell for changes to take effect"
+    fi
+fi
