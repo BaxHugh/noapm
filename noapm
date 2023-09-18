@@ -233,6 +233,7 @@ _process_args() {
                 _process_self_command_flags $@
                 ;;
             help|-h|--help)
+                _COMMAND=help
                 _help
                 exit 0
                 ;;
