@@ -455,9 +455,12 @@ _main() {
                 if [ ! -f $target ]; then
                         _error_and_exit "Failed to update noapm: could not find noapm file."
                 fi
-                curl -fsSL https://raw.githubusercontent.com/BaxHugh/noapm/main/noapm > $target
-                chmod +x $target
-                echo -n "noapm at $target updated to version "; _gecho $($target --version)
+                TEMP_SCRIPT=/tmp/noapm-updated
+                curl -fsSL https://raw.githubusercontent.com/BaxHugh/noapm/main/noapm > $TEMP_SCRIPT \
+                && chmod +x $TEMP_SCRIPT \
+                && cp $TEMP_SCRIPT $target \
+                && (echo -n "noapm at $target updated to version "; _gecho $($TEMP_SCRIPT --version)) \
+                    || _error_and_exit "Failed to update noapm"
             fi
             ;;
     esac
