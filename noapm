@@ -429,6 +429,7 @@ _main() {
                 fi
                 if [ -f $target ]; then
                     curl -fsSL https://raw.githubusercontent.com/BaxHugh/noapm/main/noapm > $target
+                    chmod +x $target
                     _gecho "noapm version $($target --version)"
                 else
                     _error_and_exit "Failed to update noapm"
