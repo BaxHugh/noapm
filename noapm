@@ -409,8 +409,10 @@ _main() {
                         _becho "$package not installed, skipping"
                     else
                         _becho "Uninstalling $package..."
-                        _noapm_uninstall_${package} || _error_and_exit "Failed to uninstall $package"
-                        _gecho "Done"
+                        _noapm_uninstall_${package} \
+                        && _gecho "Done" \
+                            || _warn "Failed to uninstall $package"  # warn because it might just be it wasn't installed
+                        
                     fi
 
                     if [[ ! -z $_COMPLETIONS ]]; then
