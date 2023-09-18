@@ -421,19 +421,22 @@ _main() {
         self)
             if [[ ! -z $_UPDATE ]]; then
                 _becho "Updating noapm..."
-                local THIS=$0
-                if [ -f $THIS ]; then
-                    local target=$THIS
+                # if this was called from noapm (or similar command) or a path to a file with a noapm like name, we can update
+                if [[ $0 == *noapm* ]]; then
+                    if [ -f $0 ]; then
+                        local target=$0
+                    else
+                        local target=$(which noapm)
+                    fi
                 else
-                    local target=$(which noapm)
+                    _error_and_exit "Failed to update noapm: could not find noapm file."
                 fi
-                if [ -f $target ]; then
-                    curl -fsSL https://raw.githubusercontent.com/BaxHugh/noapm/main/noapm > $target
-                    chmod +x $target
-                    _gecho "noapm version $($target --version)"
-                else
-                    _error_and_exit "Failed to update noapm"
+                if [ ! -f $target ]; then
+                        _error_and_exit "Failed to update noapm: could not find noapm file."
                 fi
+                curl -fsSL https://raw.githubusercontent.com/BaxHugh/noapm/main/noapm > $target
+                chmod +x $target
+                echo -n "noapm at $target updated to version "; _gecho $($target --version)
             fi
             ;;
     esac
