@@ -483,7 +483,7 @@ _noapm_completions_install_poetry() {
     if which poetry > /dev/null; then
         poetry completions zsh > $(_tmp_omzsh_completions_path poetry) || return 1
     else
-        "$HOME/.local/bin/poetry completions zsh" > $(_tmp_omzsh_completions_path poetry) || return 1
+        $HOME/.local/bin/poetry completions zsh > $(_tmp_omzsh_completions_path poetry) || return 1
     fi
 }
 
@@ -631,8 +631,8 @@ _noapm_completions_install_rustup() {
         rustup completions zsh rustup > $target/_rustup || local rtn=1
         rustup completions zsh cargo > $target/_cargo || local rtn=1
     else
-        "$HOME/.cargo/bin/rustup completions zsh rustup" > $target/_rustup || local rtn=1
-        "$HOME/.cargo/bin/rustup completions zsh cargo" > $target/_cargo || local rtn=1
+        $HOME/.cargo/bin/rustup completions zsh rustup > $target/_rustup || local rtn=1
+        $HOME/.cargo/bin/rustup completions zsh cargo > $target/_cargo || local rtn=1
     fi
     return $rtn
 }
