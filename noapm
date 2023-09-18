@@ -281,7 +281,7 @@ _process_args() {
                     unset _CONFIGURE
                     shift
                     ;;
-                --help)
+                -h|--help)
                     _help
                     exit 0
                     ;;
@@ -310,7 +310,7 @@ _process_args() {
                     _UPDATE=1
                     shift
                     ;;
-                --help)
+                -h|--help)
                     _help
                     exit 0
                     ;;
