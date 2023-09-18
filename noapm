@@ -649,7 +649,11 @@ _noapm_completions_install_rustup() {
 }
 
 _noapm_uninstall_rustup() {
-    rustup self uninstall
+    if [[ -z $_YES ]]; then
+        rustup self uninstall
+    else
+        rustup self uninstall -y
+    fi
 }
 #endregion RUST
 
