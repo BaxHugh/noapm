@@ -231,7 +231,7 @@ _process_args() {
                 shift
                 _process_self_command_flags $@
                 ;;
-            help)
+            help|-h|--help)
                 _help
                 exit 0
                 ;;
