@@ -93,7 +93,7 @@ _install_omzsh_completions_from_file_or_dir() {
     if _omzsh_is_installed; then
         local target=$(_plugins_directory)/$PLUGIN_NAME
         rm -rf $target 2> /dev/null
-        if -f $COMPLETION_FILE_OR_DIR; then
+        if [ -f $COMPLETION_FILE_OR_DIR ]; then
             mkdir $target 2> /dev/null
             local target=$target/_$PLUGIN_NAME
         fi
@@ -368,7 +368,7 @@ _main() {
                         if type "_noapm_completions_install_${package}" > /dev/null 2>&1 ; then
                             _becho "Installing $package completions..."
                             rm -rf $(_tmp_omzsh_completions_path $package) 2> /dev/null
-                            _noapm_completions_install_${package} \
+                            (_noapm_completions_install_${package} && _install_omzsh_completion_from_tmp $package) \
                                 && (
                                     _info_at_end_of_script "To enable the $package completions plugin add '$package' to the plugins variable found in ~/.zshrc"
                                     _gecho "Done" \
