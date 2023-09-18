@@ -47,7 +47,7 @@ _becho() {
     echo -e "\e[34m$1\e[0m"
 }
 
-_omzsh_is_installed() {
+_omyzsh_is_installed() {
     [[ -d $HOME/.oh-my-zsh ]]
 }
 
@@ -90,7 +90,7 @@ _echo_tool_description() {
 _install_omzsh_completions_from_file_or_dir() {
     local PLUGIN_NAME=$1
     local COMPLETION_FILE_OR_DIR=$2
-    if _omzsh_is_installed; then
+    if _omyzsh_is_installed; then
         local target=$(_plugins_directory)/$PLUGIN_NAME
         rm -rf $target 2> /dev/null
         if [ -f $COMPLETION_FILE_OR_DIR ]; then
@@ -349,6 +349,10 @@ _main() {
     #  _COMMAND, _INSTALL, _UNINSTALL, _SELF, 
     # _PACKAGES, _FORCE, _COMPLETIONS, _CONFIGURE
     # _UPDATE
+
+    if ! _omyzsh_is_installed; then
+        unset _COMPLETIONS
+    fi
 
     case $_COMMAND in
         install)
@@ -673,6 +677,22 @@ _noapm_uninstall_wine() {
     sudo apt remove $_Y winehq-stable
 }
 #endregion WINE
+
+#region oh-my-zsh
+
+_noapm_install_oh-my-zsh() {
+    curl -fsSL https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh | sh -s
+}
+
+_noapm_uninstall_oh-my-zsh() {
+    rm -rf $HOME/.oh-my-zsh
+}
+
+_noapm_oh-my-zsh_is_installed() {
+    _omyzsh_is_installed
+}
+
+#endregion oh-my-zsh
 
 # We want to just source the functions for some tests in a separate script
 if [[ -z $_SOURCING_FILE_FOR_TESTS ]]; then
