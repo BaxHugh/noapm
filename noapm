@@ -176,6 +176,8 @@ _help() {
             echo "By default --configure is enabled"
             echo "Options:"
             echo "  -f, --force      Force uninstall, i.e. don't check if already uninstalled"
+            echo "  -y               Some package installers may have interactive prompts which can be subverted with a '-y' flag"
+            echo "                   '-y' will be passed to the package installer if it is supported"
             echo "  --configure      Tear down any post install configuration. (on by default)"
             echo "  --no-configure   Don't tear down any post install configuration."
             echo ""
