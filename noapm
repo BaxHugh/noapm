@@ -353,8 +353,14 @@ _main() {
                         _becho "$package already installed - skipping"
                     else
                         _becho "Installing $package..."
-                        _noapm_install_${package} || _error_and_exit "Failed to install $package"
-                        _gecho "Done"
+                        _noapm_install_${package} \
+                            && _gecho "Done" \
+                            || (
+                                _error "Failed"
+                                echo "cleaning up..."
+                                _noapm_uninstall_${package}
+                                _error_and_exit "Failed to install $package"
+                            )
                     fi
 
                     if [[ ! -z $_COMPLETIONS ]]; then
