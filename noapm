@@ -5,6 +5,8 @@
 # noapm install <package> <package>
 # noapm uninstall <package> <package>
 
+_NOAPM_VERSION=0.1.0
+
 # miniconda could be installed in a few places
 if [[ -z $MINICONDA_LOCATION ]]; then
     if [[ -d $HOME/.miniconda3 ]]; then
@@ -125,7 +127,11 @@ _help() {
     if [[ -z $_COMMAND ]] || [[ $_COMMAND == "help" ]]; then
         echo "Usage: noapm <install|uninstall> [options] <package> <package> ..."
         echo "Usage: noapm self <command> [options]"
+        echo "Usage: noapm [options]"
         _echo_tool_description 
+        echo ""
+        echo "Options:"
+        echo "  --version      Print version"
         echo ""
         echo "See further help for each command with 'noapm <command> --help'"
         echo "Commands:"
@@ -230,6 +236,10 @@ _process_args() {
                     echo "$package"
                 done
                 return 0
+                ;;
+            --version)
+                echo $_NOAPM_VERSION
+                exit 0
                 ;;
             *)
                 _error "Unknown command $_COMMAND"
@@ -411,9 +421,18 @@ _main() {
         self)
             if [[ ! -z $_UPDATE ]]; then
                 _becho "Updating noapm..."
-                _error_and_exit "Not implemented"
-                # TODO: implement
-                # _gecho "Done"
+                local THIS=$0
+                if [ -f $THIS ]; then
+                    local target=$THIS
+                else
+                    local target=$(which noapm)
+                fi
+                if [ -f $target ]; then
+                    curl -fsSL https://raw.githubusercontent.com/BaxHugh/noapm/main/noapm > $target
+                    _gecho "noapm version $($target --version)"
+                else
+                    _error_and_exit "Failed to update noapm"
+                fi
             fi
             ;;
     esac
