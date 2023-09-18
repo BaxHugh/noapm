@@ -157,7 +157,8 @@ _help() {
             echo "By default --completions and --configure are enabled"
             echo "Options:"
             echo "  -f, --force      Force install, i.e. don't check if already installed"
-            echo "  -y               Some packages may have interactive prompts, with this flag set, we'll try our best to use their defaults / answer yes."
+            echo "  -y               Some package installers may have interactive prompts which can be subverted with a '-y' flag"
+            echo "                   '-y' will be passed to the package installer if it is supported"
             echo "  --completions    Install oh-my-zsh completions for packages if available and oh-my-zsh is installed. (on by default)"
             echo "  --no-completions  Don't install oh-my-zsh completions"
             echo "  --configure      Run any post install configuration defined for a package after installing it (on by default)"
@@ -261,7 +262,7 @@ _process_args() {
                     shift
                     ;;
                 -y)
-                    _YES=1
+                    _Y='-y'
                     shift
                     ;;
                 ## --completions for installing oh-my-zsh completions
@@ -517,14 +518,14 @@ _noapm_install_docker() {
         || _error "Failed to add docker repository" || return 1
     sudo apt update \
         && apt-cache policy docker-ce \
-        && sudo apt install -y docker-ce \
+        && sudo apt install $_Y docker-ce \
         || _error "Failed to install docker" || return 1
 
 
 }
 
 _noapm_uninstall_docker() {
-    sudo apt remove -y docker-ce || _warn_at_end_of_script "docker: Failed to remove docker-ce"
+    sudo apt remove $_Y docker-ce || _warn_at_end_of_script "docker: Failed to remove docker-ce"
 }
 
 _noapm_configure_docker() {
@@ -584,7 +585,7 @@ _noapm_install_mongodb-compass() {
     sudo dpkg -i /tmp/mongodb-compass.deb
 }
 _noapm_uninstall_mongodb-compass() {
-    sudo apt remove -y mongodb-compass
+    sudo apt remove $_Y mongodb-compass
 }
 #endregion MONGODB
 
@@ -612,22 +613,18 @@ _noapm_nvm_is_installed() {
 
 #region PERF
 _noapm_install_perf() {
-    sudo apt install -y linux-tools-common linux-tools-generic linux-tools-$(uname -r)
+    sudo apt install $_Y linux-tools-common linux-tools-generic linux-tools-$(uname -r)
 }
 
 _noapm_uninstall_perf() {
-    sudo apt remove -y linux-tools-common linux-tools-generic linux-tools-$(uname -r)
+    sudo apt remove $_Y linux-tools-common linux-tools-generic linux-tools-$(uname -r)
 }
 #endregion PERF
 
 #region RUST
 _noapm_install_rustup() {
     # source ~/.zshenv as this will add cargo to the path
-    if [[ -z $_YES ]]; then
-        curl --proto '=https' --tlsv1.3 https://sh.rustup.rs -sSf | sh && . ~/.zshenv
-    else
-        curl --proto '=https' --tlsv1.3 https://sh.rustup.rs -sSf | sh -s -- -y  && . ~/.zshenv
-    fi
+    curl --proto '=https' --tlsv1.3 https://sh.rustup.rs -sSf | sh -s -- $_Y  && . ~/.zshenv
 
     # To update: rustup update
     # To uninstall: rustup self uninstall
@@ -649,11 +646,7 @@ _noapm_completions_install_rustup() {
 }
 
 _noapm_uninstall_rustup() {
-    if [[ -z $_YES ]]; then
-        rustup self uninstall
-    else
-        rustup self uninstall -y
-    fi
+    rustup self uninstall $_Y
 }
 #endregion RUST
 
@@ -664,7 +657,7 @@ _noapm_install_wine() {
         && sudo wget -O /etc/apt/keyrings/winehq-archive.key https://dl.winehq.org/wine-builds/winehq.key \
         && sudo wget -NP /etc/apt/sources.list.d/ https://dl.winehq.org/wine-builds/ubuntu/dists/jammy/winehq-jammy.sources \
         && sudo apt update \
-        && sudo apt install -y winehq-stable \
+        && sudo apt install $_Y winehq-stable \
         || _error "Failed to install WineHQ" || return 1
     else
         _error "WineHQ is only supported on Ubuntu 22.04"
@@ -673,7 +666,7 @@ _noapm_install_wine() {
 }
 
 _noapm_uninstall_wine() {
-    sudo apt remove -y winehq-stable
+    sudo apt remove $_Y winehq-stable
 }
 #endregion WINE
 
