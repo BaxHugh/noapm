@@ -529,11 +529,12 @@ _noapm_conda_is_installed() {
 
 _noapm_configure_conda() {
     # Configure miniconda to run without activating base
-    $MINICONDA_LOCATION/bin/conda init bash zsh \
+    CONDA_CMD=$MINICONDA_LOCATION/bin/conda
+    $CONDA_CMD init bash zsh \
     && echo conda config --set auto_activate_base false \
-    && conda config --set auto_activate_base false \
+    && $CONDA_CMD config --set auto_activate_base false \
     && echo conda config --set changeps1 false \
-    && conda config --set changeps1 false \
+    && $CONDA_CMD config --set changeps1 false \
     || _warn_at_end_of_script "miniconda: Failed to configure miniconda"
 }
 
