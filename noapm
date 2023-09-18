@@ -362,20 +362,31 @@ _main() {
                         if type "_noapm_completions_install_${package}" > /dev/null 2>&1 ; then
                             _becho "Installing $package completions..."
                             rm -rf $(_tmp_omzsh_completions_path $package) 2> /dev/null
-                            _noapm_completions_install_${package} || _warn_at_end_of_script "Failed to install $package completions"
-                            _gecho "Done"
+                            _noapm_completions_install_${package} \
+                                && (
+                                    _info_at_end_of_script "To enable the $package completions plugin add '$package' to the plugins variable found in ~/.zshrc"
+                                    _gecho "Done" \
+                                ) \
+                                || (
+                                    _warn_at_end_of_script "Failed to install $package completions"
+                                    _warn "Failed"
+                                )
                         fi
                     fi
                     
                     if [[ ! -z $_CONFIGURE ]]; then
                         if type "_noapm_configure_${package}" > /dev/null 2>&1 ; then
                             _becho "Configuring $package..."
-                            _noapm_configure_${package} || _warn_at_end_of_script "Failed to configure $package"
-                            _gecho "Done"
+                            _noapm_configure_${package} \
+                                && _gecho "Done" \
+                                || (
+                                    _warn_at_end_of_script "Failed to configure $package"
+                                    _warn "Failed"
+                                )
                         fi
                     fi
                 else
-                    _warn "No install function found for $package"
+                    _error_and_exit "No install function found for $package"
                 fi
             done
             ;;
@@ -400,7 +411,7 @@ _main() {
                         if type "_noapm_completions_install_${package}" > /dev/null 2>&1 ; then
                             _becho "Uninstalling $package completions..."
                             rm  -rf $(_plugins_directory)/$package > /dev/null
-                            _info_at_end_of_script "You should remove '$PLUGIN_NAME' from the plugins variable found in ~/.zshrc"
+                            _info_at_end_of_script "You should remove '$package' from the plugins variable found in ~/.zshrc"
                             _gecho "Done"
                         fi
                     fi
@@ -408,12 +419,16 @@ _main() {
                     if [[ ! -z $_CONFIGURE ]]; then
                         if type "_noapm_unconfigure_${package}" > /dev/null 2>&1 ; then
                             _becho "Unconfiguring $package..."
-                            _noapm_unconfigure_${package} || _warn_at_end_of_script "Failed to unconfigure $package"
-                            _gecho "Done"
+                            _noapm_unconfigure_${package} \
+                                && _gecho "Done" \
+                                || (
+                                    _warn_at_end_of_script "Failed to unconfigure $package"
+                                    _warn "Failed"
+                                )
                         fi
                     fi
                 else
-                    _warn "No uninstall function found for $package"
+                    _error_and_exit "No uninstall function found for $package"
                 fi
             done
             ;;
