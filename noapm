@@ -622,10 +622,11 @@ _noapm_uninstall_perf() {
 
 #region RUST
 _noapm_install_rustup() {
+    # source ~/.zshenv as this will add cargo to the path
     if [[ -z $_YES ]]; then
-        curl --proto '=https' --tlsv1.3 https://sh.rustup.rs -sSf | sh
+        curl --proto '=https' --tlsv1.3 https://sh.rustup.rs -sSf | sh && . ~/.zshenv
     else
-        curl --proto '=https' --tlsv1.3 https://sh.rustup.rs -sSf | sh -s -- -y
+        curl --proto '=https' --tlsv1.3 https://sh.rustup.rs -sSf | sh -s -- -y  && . ~/.zshenv
     fi
 
     # To update: rustup update
