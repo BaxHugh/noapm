@@ -132,6 +132,7 @@ _help() {
         echo ""
         echo "Options:"
         echo "  --version      Print version"
+        echo "  -h, --help     Print this help message"
         echo ""
         echo "See further help for each command with 'noapm <command> --help'"
         echo "Commands:"
