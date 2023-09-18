@@ -157,6 +157,7 @@ _help() {
             echo "By default --completions and --configure are enabled"
             echo "Options:"
             echo "  -f, --force      Force install, i.e. don't check if already installed"
+            echo "  -y               Some packages may have interactive prompts, with this flag set, we'll try our best to use their defaults / answer yes."
             echo "  --completions    Install oh-my-zsh completions for packages if available and oh-my-zsh is installed. (on by default)"
             echo "  --no-completions  Don't install oh-my-zsh completions"
             echo "  --configure      Run any post install configuration defined for a package after installing it (on by default)"
@@ -257,6 +258,10 @@ _process_args() {
             case $1 in
                 -f|--force)
                     _FORCE=1
+                    shift
+                    ;;
+                -y)
+                    _YES=1
                     shift
                     ;;
                 ## --completions for installing oh-my-zsh completions
@@ -617,7 +622,7 @@ _noapm_uninstall_perf() {
 
 #region RUST
 _noapm_install_rustup() {
-    curl --proto '=https' --tlsv1.3 https://sh.rustup.rs -sSf | sh
+    curl --proto '=https' --tlsv1.3 https://sh.rustup.rs -sSf | sh -s -- -y
     # To update: rustup update
     # To uninstall: rustup self uninstall
 }
