@@ -41,3 +41,16 @@ Commands:
 # Contibution
 At the moment, these install subroutines might be somewhat opinionated to my own setup so it may not currently be all that useful to everyone. But feel free to make suggestions or contribute your own routine, and I'll see if it fits.
 This isn't the most scalable solution to installing misc packages.
+
+# Currently Supported Packages
+<!-- TODO: Update this list whenever a new package is added -->
+- conda
+- dasel
+- docker
+- mongodb-compass
+- nvm
+- oh-my-zsh
+- perf
+- poetry
+- rustup
+- wine
