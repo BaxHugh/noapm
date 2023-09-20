@@ -562,9 +562,12 @@ _main() {
                 TEMP_SCRIPT=/tmp/noapm-updated
                 curl -fsSL https://raw.githubusercontent.com/BaxHugh/noapm/main/noapm -o $TEMP_SCRIPT \
                 && chmod +x $TEMP_SCRIPT \
-                && cp $TEMP_SCRIPT $target \
-                && (echo -n "noapm at $target updated to version "; _gecho $($TEMP_SCRIPT --version)) \
                     || _error_and_exit "Failed to update noapm"
+
+                local NEW_VERSION=$($TEMP_SCRIPT --version)
+                mv $TEMP_SCRIPT $target \
+                    || _error_and_exit "Failed to update noapm"
+                echo -n "noapm at $target updated to version "; _gecho $NEW_VERSION
             fi
             ;;
     esac
