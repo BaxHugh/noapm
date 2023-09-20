@@ -557,16 +557,18 @@ _main() {
                 else
                     _error_and_exit "Failed to update noapm: could not find noapm file."
                 fi
-                if [ ! -f $target ]; then
-                        _error_and_exit "Failed to update noapm: could not find noapm file."
-                fi
+                # Check the user owns the file at target
+
+                [ -f $target ] || _error_and_exit "Failed to update noapm: could not find noapm file."
                 TEMP_SCRIPT=/tmp/noapm-updated
                 curl -fsSL https://raw.githubusercontent.com/BaxHugh/noapm/main/noapm -o $TEMP_SCRIPT \
                 && chmod +x $TEMP_SCRIPT \
                     || _error_and_exit "Failed to update noapm"
 
                 local NEW_VERSION=$($TEMP_SCRIPT --version)
-                mv $TEMP_SCRIPT $target \
+
+                [ -w $target ] || _SUDO_PREFIX=sudo
+                $_SUDO_PREFIX mv $TEMP_SCRIPT $target \
                     || _error_and_exit "Failed to update noapm"
                 echo -n "noapm at $target updated to version "; _gecho $NEW_VERSION
             fi
