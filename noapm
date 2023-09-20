@@ -197,12 +197,12 @@ _help() {
         echo ""
         echo "See further help for each command with 'noapm <command> --help'"
         echo "Commands:"
-        echo "  install"
-        echo "  uninstall"
-        echo "  self"
-        echo "  list"
-        echo "  info"
-        echo "  help"
+        echo "  install        Install packages"
+        echo "  uninstall      Uninstall packages"
+        echo "  self           Command for managing noapm itself"
+        echo "  list           List available packages"
+        echo "  info           Print information about how this script will install or uninstall a package"
+        echo "  help           Print this help message"
     fi
 
     case $_COMMAND in
