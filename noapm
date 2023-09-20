@@ -184,6 +184,7 @@ _print_info_for_package_routine() {
 #endregion PRINTING INFO
 
 _help() {
+    # NOTE: TODO: Please update the help section of the README whenever this gets changed.
 
     if [[ -z $_COMMAND ]] || [[ $_COMMAND == "help" ]]; then
         echo "Usage: noapm <install|uninstall> [options] <package> <package> ..."
