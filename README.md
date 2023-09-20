@@ -1,5 +1,6 @@
 # noapm
-NOt A Package Manager - Tool to install miscellaneous packages / tools which don't have installation provided simply by a common package manager.
+**NOt A Package Manager** (pronounced /*noʊ ɑ pæm*/) - Tool to install miscellaneous packages / tools which don't have installation provided simply by a common package manager.
+
 
 ### Motivation
 Many tools i.e. `poetry`, `conda`, `rustup`, etc. have their own installation instructions which aren’t as simple as `sudo apt install <package>` or `brew install <package>`. It’s a pain to remember how to install them when setting up a new system so for some of these tools, I have created `noapm` which is a script / command to install these tools via their maintainers’ recommended installation method.
