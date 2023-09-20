@@ -121,6 +121,67 @@ _already_installed() {
     fi  
 }
 
+#region PRINTING INFO
+
+_package_is_supported() {
+    local PACKAGE=$1
+    if type "_noapm_install_${PACKAGE}" > /dev/null 2>&1 ; then
+        return 0
+    else
+        return 1
+    fi
+}
+
+_print_info_for_package() {
+    local PACKAGE=$1
+
+    if _package_is_supported $PACKAGE; then
+        for routine in install uninstall configure unconfigure; do
+            if _print_info_for_package_routine $PACKAGE $routine > /dev/null 2>&1 ; then
+                _becho "$routine info for $PACKAGE:"
+                _print_info_for_package_routine $PACKAGE $routine
+                echo ""
+            fi
+        done
+    else
+        _error "$PACKAGE is not a package supported by this script."
+        return 1
+    fi
+}
+
+iii() { return 0; }  # marker for 'docstring' which will get output to info for a command
+_print_iii_lines() {
+    # Usage: echo "iii <message>" | _print_iii_lines
+    # Here's we're:
+    # - removing the iii marker at the beginning
+    # - escaping \' to ' and \" to "
+    # - removing the ';' at the end of the line
+    grep 'iii' | sed 's/iii //g' | sed "s/\\\'/'/g" | sed 's/\\\"/"/g' | sed 's/;$//g'
+}
+
+
+_print_info_for_package_routine() {
+    local PACKAGE=$1
+    local ROUTINE=$2
+    if type "_noapm_${ROUTINE}info_${PACKAGE}" > /dev/null 2>&1 ; then
+        _noapm_${ROUTINE}info_${PACKAGE}
+    else
+        if type "_noapm_${ROUTINE}_${PACKAGE}" > /dev/null 2>&1 ; then
+            if type "_noapm_${ROUTINE}_${PACKAGE}" | grep -q 'iii'; then
+                # print the lines which have the iii info marker at the beginning (equivalent to printing docstring)
+                type "_noapm_${ROUTINE}_${PACKAGE}" | _print_iii_lines
+            else
+                # Just echo the function definition so the user can see what it does if no iii provided
+                echo "Shell commands executed by for ${PACKAGE} ${ROUTINE}:"
+                type "_noapm_${ROUTINE}_${PACKAGE}" | grep -v "^_noapm_${ROUTINE}_${PACKAGE}"
+            fi
+        else
+            return 1
+        fi
+    fi
+}
+
+#endregion PRINTING INFO
 
 _help() {
 
@@ -140,6 +201,7 @@ _help() {
         echo "  uninstall"
         echo "  self"
         echo "  list"
+        echo "  info"
         echo "  help"
     fi
 
@@ -187,6 +249,13 @@ _help() {
                 echo "  $package"
             done
             ;;
+        info)
+            echo "Usage: noapm info <package>"
+            _echo_tool_description
+            echo ""
+            echo "Print information about how this script will install or uninstall <package>"
+            echo ""
+            ;;
         list)
             echo "Usage: noapm list"
             _echo_tool_description
@@ -214,28 +283,39 @@ _process_args() {
     # This sets the appropriate variables
     # _COMMAND, _INSTALL, _UNINSTALL, _FORCE, _PACKAGES, _COMPLETIONS, _CONFIGURE
 
+    _error_on_unknown_option_accept_help() {
+        case $1 in
+            -h|--help)
+                _help
+                exit 0
+                ;;
+            --*|-*)
+                _error "Unknown option $1"
+                _help
+                exit 1
+                ;;
+            *)
+                # Ignore arguments which are not options
+                return 0
+                ;;
+        esac
+    }
+
     _process_subcommand() {
         _COMMAND=$1
+        shift
         case $_COMMAND in
             install)
                 _INSTALL=1
-                shift
-                _process_flags_with_package_args $@
+                _process_flags_with_package_args_for_install_uninstall $@
                 ;;
             uninstall)
                 _UNINSTALL=1
-                shift
-                _process_flags_with_package_args $@
+                _process_flags_with_package_args_for_install_uninstall $@
                 ;;
             self) 
                 _SELF=1
-                shift
-                _process_self_command_flags $@
-                ;;
-            help|-h|--help)
-                _COMMAND=help
-                _help
-                exit 0
+                _process_flags_for_self $@
                 ;;
             list)
                 for package in $(_get_available_packages); do
@@ -243,8 +323,20 @@ _process_args() {
                 done
                 return 0
                 ;;
+            info)
+                _process_flags_with_package_args_for_info $@
+                for package in $_PACKAGES; do
+                    _print_info_for_package $package || exit 1
+                done
+                exit 0
+                ;;
             --version)
                 echo $_NOAPM_VERSION
+                exit 0
+                ;;
+            help|-h|--help)
+                _COMMAND=help
+                _help
                 exit 0
                 ;;
             *)
@@ -257,7 +349,7 @@ _process_args() {
         shift
     }
 
-    _process_flags_with_package_args() {
+    _process_flags_with_package_args_for_install_uninstall() {
         # args look like [options]<package> <package> ...
         while [[ $# -gt 0 ]]; do
             case $1 in
@@ -286,19 +378,9 @@ _process_args() {
                     unset _CONFIGURE
                     shift
                     ;;
-                -h|--help)
-                    _help
-                    exit 0
-                    ;;
-                --*)
-                    _error "Unknown option $1"
-                    _help
-                    exit 1
-                    ;;
-                -*)
-                    _error "Unknown option $1"
-                    _help
-                    exit 1
+                --*|-*)
+                    _error_on_unknown_option_accept_help $1
+                    shift
                     ;;
                 *)
                     _PACKAGES=$@
@@ -308,26 +390,32 @@ _process_args() {
         done
     }
 
-    _process_self_command_flags() {
+    _process_flags_with_package_args_for_info() {
+        # args look like [options]<package> <package> ...
+        while [[ $# -gt 0 ]]; do
+            case $1 in
+                --*|-*)
+                    _error_on_unknown_option_accept_help $1
+                    shift
+                    ;;
+                *)
+                    _PACKAGES=$@
+                    return 0
+                    ;;
+            esac
+        done
+    }
+
+    _process_flags_for_self() {
         while [[ $# -gt 0 ]]; do
             case $1 in
                 --update)
                     _UPDATE=1
                     shift
                     ;;
-                -h|--help)
-                    _help
-                    exit 0
-                    ;;
-                --*)
-                    _error "Unknown option $1"
-                    _help
-                    exit 1
-                    ;;
-                -*)
-                    _error "Unknown option $1"
-                    _help
-                    exit 1
+                --*|*-)
+                    _error_on_unknown_option_accept_help $1
+                    shift
                     ;;
                 *)
                     _error "Unknown argument $1"
@@ -568,7 +656,7 @@ _noapm_conda_is_installed() {
 }
 
 _noapm_configure_conda() {
-    # Configure miniconda to run without activating base
+    iii Configure miniconda so that it doesn\'t activate base by default or change the prompts
     CONDA_CMD=$MINICONDA_LOCATION/bin/conda
     $CONDA_CMD init bash zsh \
     && echo conda config --set auto_activate_base false \
