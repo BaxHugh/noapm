@@ -788,6 +788,41 @@ _noapm_oh-my-zsh_is_installed() {
 
 #endregion oh-my-zsh
 
+#region HOMEBREW
+
+# /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+
+_noapm_install_homebrew() {
+    /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+}
+
+_noapm_uninstall_homebrew() {
+    /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/uninstall.sh)"
+    sudo rm -rf /home/linuxbrew/.linuxbrew
+}
+
+_noapm_homebrew_is_installed() {
+    [[ -d /home/linuxbrew/.linuxbrew ]]
+}
+
+_noapm_configure_homebrew() {
+    # Add homebrew to path
+    local MARKER_COMMENT='>>> homebrew path added by noapm >>>'
+    for file in /home/$USER/.profile /home/$USER/.zshenv; do
+        if ! grep -q "$MARKER_COMMENT" $file; then
+            echo "
+# $MARKER_COMMENT
+if [[ -d /home/linuxbrew/.linuxbrew ]]; then
+    eval \"\$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)\"
+fi
+# <<< added by noapm <<<
+" >> $file
+        fi
+    done
+}
+
+#endregion HOMEBREW
+
 # We want to just source the functions for some tests in a separate script
 if [[ -z $_SOURCING_FILE_FOR_TESTS ]]; then
     _main $@
