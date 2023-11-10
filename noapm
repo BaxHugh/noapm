@@ -823,6 +823,29 @@ fi
 
 #endregion HOMEBREW
 
+#region GOOGLE-CLOUD-SDK
+
+_noapm_install_google-cloud-sdk() {
+    iii Run the instructions found here https://cloud.google.com/sdk/docs/install-sdk
+
+    sudo apt-get update
+    sudo apt install apt-transport-https 
+
+    echo "deb [signed-by=/usr/share/keyrings/cloud.google.asc] https://packages.cloud.google.com/apt cloud-sdk main" | sudo tee -a /etc/apt/sources.list.d/google-cloud-sdk.list
+    curl https://packages.cloud.google.com/apt/doc/apt-key.gpg | sudo tee /usr/share/keyrings/cloud.google.asc
+    sudo apt-get update && sudo apt-get install google-cloud-cli
+}
+
+_noapm_uninstall_google-cloud-sdk() {
+    sudo apt-get remove google-cloud-sdk
+}
+
+_noapm_configure_google-cloud-sdk() {
+    gcloud init
+}
+
+#endregion GOOGLE-CLOUD-SDK
+
 # We want to just source the functions for some tests in a separate script
 if [[ -z $_SOURCING_FILE_FOR_TESTS ]]; then
     _main $@
