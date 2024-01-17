@@ -841,7 +841,8 @@ _noapm_uninstall_google-cloud-sdk() {
 }
 
 _noapm_configure_google-cloud-sdk() {
-    gcloud init
+    iii Tell the user how to initialise gcloud with 'gcloud init' but don\'t do it automatically as that requires user input and isn\'t necessary.
+    echo 'To initialise gcloud run `gcloud init` for an interactive setup.'
 }
 
 #endregion GOOGLE-CLOUD-SDK
