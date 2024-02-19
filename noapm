@@ -847,6 +847,22 @@ _noapm_configure_google-cloud-sdk() {
 
 #endregion GOOGLE-CLOUD-SDK
 
+#region GOOGLE-CHROME
+
+_noapm_install_google-chrome() {
+    iii Add the google chrome apt repository and apt install it
+
+    wget -q -O - https://dl.google.com/linux/linux_signing_key.pub | sudo apt-key add - \
+        && sudo sh -c 'echo "deb [arch=amd64] http://dl.google.com/linux/chrome/deb/ stable main" >> /etc/apt/sources.list.d/google.list'
+
+    sudo apt-get update && sudo apt-get install google-chrome-stable
+}
+
+_noapm_uninstall_google-chrome() {
+    sudo apt-get remove google-chrome-stable
+}
+#endregion GOOGLE-CHROME
+
 # We want to just source the functions for some tests in a separate script
 if [[ -z $_SOURCING_FILE_FOR_TESTS ]]; then
     _main $@
