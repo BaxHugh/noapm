@@ -772,6 +772,21 @@ _noapm_uninstall_wine() {
 }
 #endregion WINE
 
+#region BOTTLES
+_noapm_install_bottles() {
+   flatpak install https://dl.flathub.org/repo/appstream/com.usebottles.bottles.flatpakref
+}
+
+_noapm_configure_bottles() {
+   flatpak override com.usebottles.bottles --user --filesystem=xdg-data/applications
+   flatpak override com.usebottles.bottles --user --filesystem=xdg-music
+}
+
+_noapm_uninstall_bottles() {
+    flatpak uninstall com.usebottles.bottles
+}
+#endregion BOTTLES
+
 #region oh-my-zsh
 
 _noapm_install_oh-my-zsh() {
