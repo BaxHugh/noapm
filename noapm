@@ -5,7 +5,7 @@
 # noapm install <package> <package>
 # noapm uninstall <package> <package>
 
-_NOAPM_VERSION=0.1.0
+_NOAPM_VERSION=0.1.1
 
 # miniconda could be installed in a few places
 if [[ -z $MINICONDA_LOCATION ]]; then
@@ -823,7 +823,7 @@ _noapm_homebrew_is_installed() {
 _noapm_configure_homebrew() {
     # Add homebrew to path
     local MARKER_COMMENT='>>> homebrew path added by noapm >>>'
-    for file in /home/$USER/.profile /home/$USER/.zshenv; do
+    for file in $HOME/.profile $HOME/.zshenv; do
         if ! grep -q "$MARKER_COMMENT" $file; then
             echo "
 # $MARKER_COMMENT
