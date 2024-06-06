@@ -68,7 +68,8 @@ _print_warn_buffer() {
         return 0
     fi
     echo -e $_WARNINGS_BUFFER | while read line; do
-        _warn "$line"
+        # only if line not empty (last line is empty)
+        [[ ! -z $line ]] && _warn "$line"
     done
 }
 
@@ -458,12 +459,12 @@ _main() {
                         _becho "Installing $package..."
                         _noapm_install_${package} \
                             && _gecho "Done" \
-                            || (
+                            || {
                                 _error "Failed"
                                 echo "cleaning up..."
                                 _noapm_uninstall_${package}
                                 _error_and_exit "Failed to install $package"
-                            )
+                            }
                     fi
 
                     if [[ ! -z $_COMPLETIONS ]]; then
@@ -472,14 +473,14 @@ _main() {
                             _becho "Installing $package completions..."
                             rm -rf $(_tmp_omzsh_completions_path $package) 2> /dev/null
                             (_noapm_completions_install_${package} && _install_omzsh_completion_from_tmp $package) \
-                                && (
+                                && {
                                     _info_at_end_of_script "To enable the $package completions plugin add '$package' to the plugins variable found in ~/.zshrc"
-                                    _gecho "Done" \
-                                ) \
-                                || (
+                                    _gecho "Done"
+                                } \
+                                || {
                                     _warn_at_end_of_script "Failed to install $package completions"
                                     _warn "Failed"
-                                )
+                                }
                         fi
                     fi
                     
@@ -488,10 +489,10 @@ _main() {
                             _becho "Configuring $package..."
                             _noapm_configure_${package} \
                                 && _gecho "Done" \
-                                || (
+                                || {
                                     _warn_at_end_of_script "Failed to configure $package"
                                     _warn "Failed"
-                                )
+                                }
                         fi
                     fi
                 else
@@ -532,10 +533,10 @@ _main() {
                             _becho "Unconfiguring $package..."
                             _noapm_unconfigure_${package} \
                                 && _gecho "Done" \
-                                || (
+                                || {
                                     _warn_at_end_of_script "Failed to unconfigure $package"
                                     _warn "Failed"
-                                )
+                                }
                         fi
                     fi
                 else
