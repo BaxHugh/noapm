@@ -5,7 +5,7 @@
 # noapm install <package> <package>
 # noapm uninstall <package> <package>
 
-_NOAPM_VERSION=0.1.1
+_NOAPM_VERSION=0.1.2
 
 # miniconda could be installed in a few places
 if [[ -z $MINICONDA_LOCATION ]]; then
